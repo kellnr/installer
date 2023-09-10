@@ -83,7 +83,7 @@ function checkDeps {
 }
 
 function downloadKellnr {
-    BASE_URL="https://github.com/kellnr/kellnr/releases/download" 
+    BASE_URL="https://github.com/kellnr/kellnr/releases/download"
     LATEST_URL="$BASE_URL/latest"
     VERSION_URL="$BASE_URL/$VERSION"
     ARCH_X86_X64="x86_64-unknown-linux-gnu"
@@ -120,7 +120,7 @@ function downloadKellnr {
         fi
     fi
     
-    STATUSCODE=$(curl --silent --output $KELLNR_ZIP --write-out "%{http_code}" $KELLNR_URL)
+    STATUSCODE=$(curl -L --silent --output $KELLNR_ZIP --write-out "%{http_code}" $KELLNR_URL)
     if test $STATUSCODE -ne 200; then
         echo "ERROR: Failed to download Kellnr. Statuscode: $STATUSCODE"
         rm $KELLNR_ZIP
