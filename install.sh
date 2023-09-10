@@ -122,6 +122,7 @@ function downloadKellnr {
     
     STATUSCODE=$(curl -L --silent --output $KELLNR_ZIP --write-out "%{http_code}" $KELLNR_URL)
     if test $STATUSCODE -ne 200; then
+        echo "ERROR: Faild to download from: $KELLNR_URL"
         echo "ERROR: Failed to download Kellnr. Statuscode: $STATUSCODE"
         rm $KELLNR_ZIP
         exit 1
