@@ -85,7 +85,7 @@ function checkDeps {
 function downloadKellnr {
     BASE_URL="https://github.com/kellnr/kellnr/releases/download"
     LATEST_URL="$BASE_URL/latest"
-    VERSION_URL="$BASE_URL/$VERSION"
+    VERSION_URL="$BASE_URL/v$VERSION"
     ARCH_X86_X64="x86_64-unknown-linux-gnu"
     ARCH_AARCH64="aarch64-unknown-linux-gnu"
     ARCH_ARMV7="armv7-unknown-linux-gnueabihf"
