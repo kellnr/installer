@@ -4,8 +4,6 @@ function usage {
     echo "Usage: $(basename $0) [-tdhvpas]" 2>&1
     echo '      -h              shows help'
     echo
-    echo '      -a              [required] API address for Kellnr. Hostname where Kellnr will be reachable.'
-    echo
     echo '      -s              [optional] Create a systemd service and run Kellnr. Needs "sudo" rights.'
     echo '      -d data_dir     [optional] directory where Kellnr saves all data. Must be different to the install directory. (default = $HOME/kdata)'
     echo '      -v version      [optional] install a specific version. (default = latest)'
@@ -15,7 +13,7 @@ function usage {
 }
 
 function parseArgs () {
-    optstring="shv:t:p:a:d:"
+    optstring="shv:t:p:d:"
     local OPTIND
     
     # Defaults
@@ -24,9 +22,6 @@ function parseArgs () {
     # Parse arguments from command line
     while getopts ${optstring} arg; do
         case ${arg} in
-            a)
-                ADDRESS="${OPTARG}"
-            ;;
             v)
                 VERSION="${OPTARG}"
             ;;
@@ -57,16 +52,10 @@ function parseArgs () {
             ;;
         esac
     done
-
-    if test -z $ADDRESS; then
-        echo "ERROR: No API address set."
-        usage
-        exit 1
-    fi
 }
 
 function checkDeps {
-    for c in git unzip curl sed rustc
+    for c in unzip curl sed rustc
     do
         if ! command -v $c &> /dev/null
         then
@@ -141,10 +130,6 @@ function genPwd {
 function configure {
     echo "INFO: Configure Kellnr"
 
-    # Set API address
-    echo "INFO: API address set to \"$ADDRESS\""
-    sed -i "s/api_address =.*/api_address = \"$ADDRESS\"/" ./kellnr/config/default.toml
-    
     # Set admin password
     if test -z "$ADMIN_PWD"
     then
@@ -193,7 +178,8 @@ echo "$service" | sudo tee /etc/systemd/system/kellnr.service > /dev/null
 function finish {
     echo "INFO: Installation finished"
     echo
-    echo "TODO: Open the ports 8000 and 9418 if not configured differently in \"./config/default.toml\""
+    echo "TODO: Configure Kellnr in \"./config/default.toml\""
+    echo "TODO: Open the port 8000, if not configured differently"
     echo
     
     if test -z $SERVICE; then
