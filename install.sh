@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function usage {
-    echo "Usage: $(basename "$0") [-tdhvpas]" 2>&1
+    echo "Usage: $(basename "$0") [-tdhvpasm]" 2>&1
     echo '      -h              shows help'
     echo
     echo '      -s              [optional] Create a systemd service and run Kellnr. Needs "sudo" rights.'
@@ -9,6 +9,7 @@ function usage {
     echo '      -v version      [optional] install a specific version. (default = latest)'
     echo '      -p password     [optional] password for admin user. (default = random)'
     echo '      -t access_token [optional] Cargo access token for admin user. (default = random)'
+    echo '      -m              [optional] Install static binary, compiled with musl to support more Linux distributions. (default = false)'
     exit 1
 }
 
@@ -18,6 +19,7 @@ function parseArgs () {
     
     # Defaults
     DIRECTORY="$HOME/kdata"
+    STATIC="false"
     
     # Parse arguments from command line
     while getopts ${optstring} arg; do
@@ -39,6 +41,9 @@ function parseArgs () {
             ;;
             s)
                 SERVICE='true'
+            ;;
+            m)
+                STATIC='true'
             ;;
             :)
                 echo "$0: Must supply an argument to -$OPTARG." >&2
@@ -75,9 +80,16 @@ function downloadKellnr {
     BASE_URL="https://github.com/kellnr/kellnr/releases"
     LATEST_URL="$BASE_URL/latest/download"
     VERSION_URL="$BASE_URL/download/v$VERSION"
-    ARCH_X86_X64="x86_64-unknown-linux-gnu"
-    ARCH_AARCH64="aarch64-unknown-linux-gnu"
-    ARCH_ARMV7="armv7-unknown-linux-gnueabihf"
+    
+    if [ "$STATIC" = "true" ]; then
+        LINKAGE="musl"
+    else
+        LINKAGE="gnu"
+    fi
+
+    ARCH_X86_64="x86_64-unknown-linux-$LINKAGE"
+    ARCH_AARCH64="aarch64-unknown-linux-$LINKAGE"
+    ARCH_ARMV7="armv7-unknown-linux-${LINKAGE}eabihf"
 
     ARCH=$(lscpu | grep Architecture | tr -d ' ' | cut -d : -f 2)
     if [ "$ARCH" = "aarch64" ]; then 
@@ -101,10 +113,10 @@ function downloadKellnr {
     else
         if test -z "$VERSION"
         then
-            KELLNR_URL="$LATEST_URL/kellnr-$ARCH_X86_X64.zip"
+            KELLNR_URL="$LATEST_URL/kellnr-$ARCH_X86_64.zip"
             KELLNR_ZIP="kellnr-latest.zip"
         else
-            KELLNR_URL="$VERSION_URL/kellnr-$ARCH_X86_X64.zip"
+            KELLNR_URL="$VERSION_URL/kellnr-$ARCH_X86_64.zip"
             KELLNR_ZIP="kellnr-$VERSION.zip"
         fi
     fi
