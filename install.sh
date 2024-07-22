@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function usage {
-    echo "Usage: $(basename $0) [-tdhvpas]" 2>&1
+    echo "Usage: $(basename "$0") [-tdhvpas]" 2>&1
     echo '      -h              shows help'
     echo
     echo '      -s              [optional] Create a systemd service and run Kellnr. Needs "sudo" rights.'
@@ -64,7 +64,7 @@ function checkDeps {
         fi
     done
     
-    if ! test -z $MISSING_CMD
+    if ! test -z "$MISSING_CMD"
     then
         echo "ERROR: Missing dependencies."
         exit 1
@@ -80,7 +80,7 @@ function downloadKellnr {
     ARCH_ARMV7="armv7-unknown-linux-gnueabihf"
 
     ARCH=$(lscpu | grep Architecture | tr -d ' ' | cut -d : -f 2)
-    if [ $ARCH = "aarch64" ]; then 
+    if [ "$ARCH" = "aarch64" ]; then 
         if test -z "$VERSION"
         then
             KELLNR_URL="$LATEST_URL/kellnr-$ARCH_AARCH64.zip"
@@ -89,7 +89,7 @@ function downloadKellnr {
             KELLNR_URL="$VERSION_URL/kellnr-$ARCH_AARCH64.zip"
             KELLNR_ZIP="kellnr-$VERSION.zip"
         fi
-    elif [ $ARCH = "armv7" ]; then 
+    elif [ "$ARCH" = "armv7" ]; then 
         if test -z "$VERSION"
         then
             KELLNR_URL="$LATEST_URL/kellnr-$ARCH_ARMV7.zip"
@@ -109,22 +109,22 @@ function downloadKellnr {
         fi
     fi
     
-    STATUSCODE=$(curl -L --silent --output $KELLNR_ZIP --write-out "%{http_code}" $KELLNR_URL)
-    if test $STATUSCODE -ne 200; then
+    STATUSCODE=$(curl -L --silent --output "$KELLNR_ZIP" --write-out "%{http_code}" "$KELLNR_URL")
+    if test "$STATUSCODE" -ne 200; then
         echo "ERROR: Faild to download from: $KELLNR_URL"
         echo "ERROR: Failed to download Kellnr. Statuscode: $STATUSCODE"
-        rm $KELLNR_ZIP
+        rm "$KELLNR_ZIP"
         exit 1
     fi
 }
 
 function unpack {
     echo "INFO: Unpack Kellnr"
-    unzip -qq -o $KELLNR_ZIP -d ./kellnr
+    unzip -qq -o "$KELLNR_ZIP" -d ./kellnr
 }
 
 function genPwd {
-    < /dev/urandom tr -dc A-Z-a-z-0-9 | head -c${1:-$1};
+    < /dev/urandom tr -dc A-Z-a-z-0-9 | head -c"${1:-$1}";
 }
 
 function configure {
@@ -149,8 +149,8 @@ function configure {
     # Set and create data directory
     echo "INFO: Data directory set to: \"$DIRECTORY\""
     sed -i "s,data_dir =.*,data_dir = \"$DIRECTORY\"," ./kellnr/config/default.toml
-    if [ ! -d $DIRECTORY ]; then
-        mkdir -p $DIRECTORY
+    if [ ! -d "$DIRECTORY" ]; then
+        mkdir -p "$DIRECTORY"
     fi
 }
 
@@ -182,7 +182,7 @@ function finish {
     echo "TODO: Open the port 8000, if not configured differently"
     echo
     
-    if test -z $SERVICE; then
+    if test -z "$SERVICE"; then
         echo 'TODO: Start Kellnr from the Kellnr directory with "cd ./kellnr && ./kellnr"'
     else
         echo 'TODO: Enable the Kellnr service with: "sudo systemctl enable kellnr"'
@@ -201,7 +201,7 @@ checkDeps
 downloadKellnr
 unpack
 configure
-if ! test -z $SERVICE; then
+if ! test -z "$SERVICE"; then
     createService
 fi
 finish
