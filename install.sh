@@ -14,7 +14,7 @@ function usage {
 }
 
 function parseArgs () {
-    optstring="shv:t:p:d:"
+    optstring="shmv:t:p:d:"
     local OPTIND
     
     # Defaults
