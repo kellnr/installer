@@ -60,7 +60,7 @@ function parseArgs () {
 }
 
 function checkDeps {
-    for c in unzip curl sed rustc
+    for c in unzip curl sed
     do
         if ! command -v $c &> /dev/null
         then
