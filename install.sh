@@ -1,11 +1,12 @@
 #!/bin/bash
 
 function usage {
-    echo "Usage: $(basename "$0") [-tdhvpasm]" 2>&1
+    echo "Usage: $(basename "$0") [-tdhvpasmi]" 2>&1
     echo '      -h              shows help'
     echo
     echo '      -s              [optional] Create a systemd service and run Kellnr. Needs "sudo" rights.'
-    echo '      -d data_dir     [optional] directory where Kellnr saves all data. Must be different to the install directory. (default = $HOME/kdata)'
+    echo '      -i install_dir  [optional] directory where Kellnr binary is installed. (default = /usr/local/bin)'
+    echo '      -d data_dir     [optional] directory where Kellnr saves all data. Must be different to the install directory. (default = /var/lib/kellnr)'
     echo '      -v version      [optional] install a specific version. (default = latest)'
     echo '      -p password     [optional] password for admin user. (default = random)'
     echo '      -t access_token [optional] Cargo access token for admin user. (default = random)'
@@ -14,13 +15,14 @@ function usage {
 }
 
 function parseArgs () {
-    optstring="shmv:t:p:d:"
+    optstring="shmv:t:p:d:i:"
     local OPTIND
-    
+
     # Defaults
-    DIRECTORY="$HOME/kdata"
+    INSTALL_DIR="/usr/local/bin"
+    DIRECTORY="/var/lib/kellnr"
     STATIC="false"
-    
+
     # Parse arguments from command line
     while getopts ${optstring} arg; do
         case ${arg} in
@@ -35,6 +37,9 @@ function parseArgs () {
             ;;
             d)
                 DIRECTORY="${OPTARG}"
+            ;;
+            i)
+                INSTALL_DIR="${OPTARG}"
             ;;
             h)
                 usage
@@ -130,9 +135,20 @@ function downloadKellnr {
     fi
 }
 
-function unpack {
-    echo "INFO: Unpack Kellnr"
-    unzip -qq -o "$KELLNR_ZIP" -d ./kellnr
+function install {
+    echo "INFO: Install Kellnr to $INSTALL_DIR"
+
+    # Create install directory if it does not exist
+    if [ ! -d "$INSTALL_DIR" ]; then
+        mkdir -p "$INSTALL_DIR"
+    fi
+
+    # Unpack directly to install directory
+    unzip -qq -o "$KELLNR_ZIP" -d "$INSTALL_DIR"
+    chmod +x "$INSTALL_DIR/kellnr"
+
+    # Clean up
+    rm -f "$KELLNR_ZIP"
 }
 
 function genPwd {
@@ -142,25 +158,39 @@ function genPwd {
 function configure {
     echo "INFO: Configure Kellnr"
 
+    CONFIG_DIR="/etc/kellnr"
+    CONFIG_FILE="$CONFIG_DIR/kellnr.toml"
+
+    # Create config directory
+    if [ ! -d "$CONFIG_DIR" ]; then
+        mkdir -p "$CONFIG_DIR"
+    fi
+
+    # Generate default config file
+    echo "INFO: Generating config file at $CONFIG_FILE"
+    "$INSTALL_DIR/kellnr" config init -o "$CONFIG_FILE"
+
     # Set admin password
     if test -z "$ADMIN_PWD"
     then
         ADMIN_PWD=$(genPwd 12)
     fi
     echo "INFO: Admin password set to \"$ADMIN_PWD\""
-    sed -i "s/admin_pwd =.*/admin_pwd = \"$ADMIN_PWD\"/" ./kellnr/config/default.toml
-    
-    # Set admin access token for Cagro
+    sed -i "s/admin_pwd = .*/admin_pwd = \"$ADMIN_PWD\"/" "$CONFIG_FILE"
+
+    # Set admin access token for Cargo
     if test -z "$ACCESS_TOKEN"
     then
         ACCESS_TOKEN=$(genPwd 32)
     fi
     echo "INFO: Admin cargo access token set to: \"$ACCESS_TOKEN\""
-    sed -i "s/admin_token =.*/admin_token = \"$ACCESS_TOKEN\"/" ./kellnr/config/default.toml
-    
-    # Set and create data directory
+    sed -i "s/admin_token = .*/admin_token = \"$ACCESS_TOKEN\"/" "$CONFIG_FILE"
+
+    # Set data directory
     echo "INFO: Data directory set to: \"$DIRECTORY\""
-    sed -i "s,data_dir =.*,data_dir = \"$DIRECTORY\"," ./kellnr/config/default.toml
+    sed -i "s,data_dir = .*,data_dir = \"$DIRECTORY\"," "$CONFIG_FILE"
+
+    # Create data directory
     if [ ! -d "$DIRECTORY" ]; then
         mkdir -p "$DIRECTORY"
     fi
@@ -174,10 +204,9 @@ After=network.target syslog.target
 
 [Service]
 Type=simple
-ExecStart=$PWD/kellnr/kellnr
+ExecStart=$INSTALL_DIR/kellnr -c $CONFIG_FILE run
 ExecStop=/usr/bin/pkill kellnr
 ExecStopPost=/usr/bin/pkill git
-WorkingDirectory=$PWD/kellnr
 
 [Install]
 WantedBy=multi-user.target
@@ -190,12 +219,18 @@ echo "$service" | sudo tee /etc/systemd/system/kellnr.service > /dev/null
 function finish {
     echo "INFO: Installation finished"
     echo
-    echo "TODO: Configure Kellnr in \"./config/default.toml\""
-    echo "TODO: Open the port 8000, if not configured differently"
+    echo "INFO: Kellnr installed to: $INSTALL_DIR/kellnr"
+    echo "INFO: Config file: $CONFIG_FILE"
+    echo "INFO: Data directory: $DIRECTORY"
+    echo "INFO: Admin password: $ADMIN_PWD"
+    echo "INFO: Admin token: $ACCESS_TOKEN"
     echo
-    
+    echo "TODO: Open port 8000, if not configured differently"
+    echo
+
     if test -z "$SERVICE"; then
-        echo 'TODO: Start Kellnr from the Kellnr directory with "cd ./kellnr && ./kellnr"'
+        echo "TODO: Start Kellnr with:"
+        echo "      kellnr -c $CONFIG_FILE run"
     else
         echo 'TODO: Enable the Kellnr service with: "sudo systemctl enable kellnr"'
         echo '      Start the Kellnr service with: "sudo systemctl start kellnr"'
@@ -211,7 +246,7 @@ echo "INFO: Start Kellnr installation"
 parseArgs "$@"
 checkDeps
 downloadKellnr
-unpack
+install
 configure
 if ! test -z "$SERVICE"; then
     createService
