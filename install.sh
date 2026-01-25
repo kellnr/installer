@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 function usage {
     echo "Usage: $(basename "$0") [-tdhvpasmi]" 2>&1
     echo '      -h              shows help'
