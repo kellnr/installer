@@ -2,17 +2,22 @@
 
 set -e
 
+# Defaults
+INSTALL_DIR="/usr/local/bin"
+DIRECTORY="/var/lib/kellnr"
+STATIC="false"
+
 function usage {
     echo "Usage: $(basename "$0") [-tdhvpasmi]" 2>&1
     echo '      -h              shows help'
     echo
     echo '      -s              [optional] Create a systemd service and run Kellnr. Needs "sudo" rights.'
-    echo '      -i install_dir  [optional] directory where Kellnr binary is installed. (default = /usr/local/bin)'
-    echo '      -d data_dir     [optional] directory where Kellnr saves all data. Must be different to the install directory. (default = /var/lib/kellnr)'
+    echo "      -i install_dir  [optional] directory where Kellnr binary is installed. (default = $INSTALL_DIR)"
+    echo "      -d data_dir     [optional] directory where Kellnr saves all data. Must be different to the install directory. (default = $DIRECTORY)"
     echo '      -v version      [optional] install a specific version. (default = latest)'
     echo '      -p password     [optional] password for admin user. (default = random)'
     echo '      -t access_token [optional] Cargo access token for admin user. (default = random)'
-    echo '      -m              [optional] Install static binary, compiled with musl to support more Linux distributions. (default = false)'
+    echo "      -m              [optional] Install static binary, compiled with musl to support more Linux distributions. (default = $STATIC)"
     exit 1
 }
 
@@ -20,10 +25,6 @@ function parseArgs () {
     optstring="shmv:t:p:d:i:"
     local OPTIND
 
-    # Defaults
-    INSTALL_DIR="/usr/local/bin"
-    DIRECTORY="/var/lib/kellnr"
-    STATIC="false"
 
     # Parse arguments from command line
     while getopts ${optstring} arg; do
@@ -206,7 +207,7 @@ After=network.target syslog.target
 
 [Service]
 Type=simple
-ExecStart=$INSTALL_DIR/kellnr -c $CONFIG_FILE run
+ExecStart=$INSTALL_DIR/kellnr -c $CONFIG_FILE start
 ExecStop=/usr/bin/pkill kellnr
 ExecStopPost=/usr/bin/pkill git
 
@@ -232,7 +233,7 @@ function finish {
 
     if test -z "$SERVICE"; then
         echo "TODO: Start Kellnr with:"
-        echo "      kellnr -c $CONFIG_FILE run"
+        echo "      kellnr -c $CONFIG_FILE start"
     else
         echo 'TODO: Enable the Kellnr service with: "sudo systemctl enable kellnr"'
         echo '      Start the Kellnr service with: "sudo systemctl start kellnr"'
@@ -254,3 +255,4 @@ if ! test -z "$SERVICE"; then
     createService
 fi
 finish
+
