@@ -6,6 +6,8 @@ set -e
 INSTALL_DIR="/usr/local/bin"
 DIRECTORY="/var/lib/kellnr"
 STATIC="false"
+# Oldest glibc the glibc (gnu) binaries support, since Kellnr 7.5.0
+MIN_GLIBC="2.36"
 
 function usage {
     echo "Usage: $(basename "$0") [-tdhvpasmi]" 2>&1
@@ -17,7 +19,8 @@ function usage {
     echo '      -v version      [optional] install a specific version. (default = latest)'
     echo '      -p password     [optional] password for admin user. (default = random)'
     echo '      -t access_token [optional] Cargo access token for admin user. (default = random)'
-    echo "      -m              [optional] Install static binary, compiled with musl to support more Linux distributions. (default = $STATIC)"
+    echo "      -m              [optional] Install static binary, compiled with musl to support more Linux distributions."
+    echo "                      Use it on systems with a glibc older than $MIN_GLIBC. (default = $STATIC)"
     exit 1
 }
 
@@ -84,6 +87,35 @@ function checkDeps {
     fi
 }
 
+function glibcVersion {
+    local version
+    version=$(getconf GNU_LIBC_VERSION 2>/dev/null | awk '{print $2}') || true
+    if [ -z "$version" ] && command -v ldd &> /dev/null; then
+        version=$(ldd --version 2>&1 | head -n 1 | grep -oE '[0-9]+\.[0-9]+$') || true
+    fi
+    echo "$version"
+}
+
+# True if version $1 is older than version $2
+function versionOlder {
+    [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n 1)" = "$1" ]
+}
+
+# The glibc binary does not start on an older glibc. Warn instead of
+# switching to musl, so the user decides.
+function checkGlibc {
+    if [ "$STATIC" = "true" ]; then
+        return
+    fi
+
+    local glibc
+    glibc=$(glibcVersion)
+    if [ -z "$glibc" ] || versionOlder "$glibc" "$MIN_GLIBC"; then
+        echo "WARNING: Since Kellnr 7.5.0, the glibc binary needs glibc $MIN_GLIBC or newer (found: ${glibc:-no glibc})."
+        echo "WARNING: If Kellnr does not start, install the static musl binary with -m, which runs on any Linux."
+    fi
+}
+
 function downloadKellnr {
     BASE_URL="https://github.com/kellnr/kellnr/releases"
     LATEST_URL="$BASE_URL/latest/download"
@@ -146,8 +178,8 @@ function install {
         mkdir -p "$INSTALL_DIR"
     fi
 
-    # Unpack directly to install directory
-    unzip -qq -o "$KELLNR_ZIP" -d "$INSTALL_DIR"
+    # Unpack only the binary, the zip also contains an sbom/ directory
+    unzip -qq -o "$KELLNR_ZIP" kellnr -d "$INSTALL_DIR"
     chmod +x "$INSTALL_DIR/kellnr"
 
     # Clean up
@@ -248,6 +280,7 @@ fi
 echo "INFO: Start Kellnr installation"
 parseArgs "$@"
 checkDeps
+checkGlibc
 downloadKellnr
 install
 configure

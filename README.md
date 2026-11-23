@@ -32,7 +32,7 @@ curl -sSL https://github.com/kellnr-org/installer/releases/download/v1.0.0/insta
 | `-v <version>` | Install specific Kellnr version |
 | `-p <password>` | Set admin password |
 | `-t <token>` | Set Cargo access token |
-| `-m` | Use musl (static) binary |
+| `-m` | Use musl (static) binary, needed on systems with a glibc older than 2.36 (for example Ubuntu 22.04, RHEL 8 and 9) |
 | `-h` | Show help |
 
 ### Example with custom paths
